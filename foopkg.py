@@ -72,7 +72,7 @@ def compile_item(name, item, builddir, untardir):
 	if special and item['build']['make-args']: makeargs.append(item['build']['make-args'])
 	subprocess.check_call(makeargs, stderr=sys.stdout)
 	
-	if not dryrun:
+	if not dryrun or (special and item['build']['no-make-install']):
 		gprint('-> Installing package {}'.format(name))
 		subprocess.check_call(['/usr/bin/porg', '-lp', '{}-{}'.format(name, item['version']), '/usr/bin/make install'], stderr=sys.stdout)
 	if makedir:
@@ -119,6 +119,8 @@ def install_item(name, item):
 	compile_item(name, item, builddir, untardir)
 
 if __name__ == '__main__':
+	global dryrun
+	global redownload
 	load_rules()
 	# print(rules)
 	# running program from shell
@@ -130,8 +132,8 @@ if __name__ == '__main__':
 	parser.add_argument('--file', '-f', metavar='file', help='Custom file or url to be used instead of url in rules.json', type=argparse.FileType(mode='r'))
 	parser.add_argument('--version', '-n', metavar='version', help='Custom version to be used as override of version in rules.json')
 	args = parser.parse_args()
-	global dryrun = args.no_install
-	global redownload = args.redownload
+	dryrun = args.no_install
+	redownload = args.redownload
 	package = args.package
 
 	if not package in rules:
