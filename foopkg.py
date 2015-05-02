@@ -82,6 +82,7 @@ def compile_item(name, item, builddir, untardir):
 def load_rules():
 	global rules
 	rulesfiles = os.listdir(RULE_DIR)
+	rulesfiles = map(lambda f: os.path.join(RULE_DIR, f), rulesfiles)
 	for f in rulesfiles:
 		with open(f, 'r') as h:
 			j = h.read()
@@ -119,8 +120,6 @@ def install_item(name, item):
 	compile_item(name, item, builddir, untardir)
 
 if __name__ == '__main__':
-	global dryrun
-	global redownload
 	load_rules()
 	# print(rules)
 	# running program from shell
