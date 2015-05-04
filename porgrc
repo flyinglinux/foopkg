@@ -1,0 +1,1 @@
+EXCLUDE=/tmp:/dev:/proc:/sys:/run:/mnt:/media:/cdrom:/var/build
