@@ -256,7 +256,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--no-deps',
         help="Don't process dependencies. This is helpful when the \
-dependency resolver is broken (always)."
+dependency resolver is broken (always).",
+        action='store_true'
     )
     parser.add_argument('--version', '-n', metavar='version',
                         help='Custom version to be used as override of version in rules.json'
