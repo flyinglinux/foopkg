@@ -138,7 +138,7 @@ def compile_item(name, item, builddir, untardir):
 
         gprint('-> Compiling package {}, go get some tea'.format(name))
         makeargs = [(special and 'make-binary' in item['build']) or '/usr/bin/make']
-        makeargs.extend(['--jobs='+str(cores)])
+        makeargs.extend(['--jobs=' + str(cores)])
         if special and 'make-args' in item['build']:
             makeargs.extend(item['build']['make-args'])
         my_check_call(makeargs, buildlog)
@@ -253,6 +253,11 @@ if __name__ == '__main__':
     parser.add_argument('--file', '-f', metavar='file',
                         help='Custom file or url to be used instead of url in rules.json'
                         )
+    parser.add_argument(
+        '--no-deps',
+        help="Don't process dependencies. This is helpful when the \
+dependency resolver is broken (always)."
+    )
     parser.add_argument('--version', '-n', metavar='version',
                         help='Custom version to be used as override of version in rules.json'
                         )
@@ -276,4 +281,5 @@ if __name__ == '__main__':
 
     if args.action == 'install' or args.action == 'i':
         check_installed(args.package)
-        [install_item(i, rules[i]) for i in get_install_list(args.package)]
+        if not args.no_deps:
+            [install_item(i, rules[i]) for i in get_install_list(args.package)]
