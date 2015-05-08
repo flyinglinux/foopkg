@@ -16,11 +16,13 @@ import glob
 
 
 RULE_DIR = '/etc/foopkg/rules.d'
+CONFIG_FILE = '/etc/foopkg/config.json'
 BUILD_DIR_BASE = '/var/build'
 
 
 cores = multiprocessing.cpu_count()
 rules = {}
+config = {}
 dryrun = False
 redownload = False
 debug = True
@@ -151,7 +153,9 @@ def compile_item(name, item, builddir, untardir):
         my_check_call(configureargs, buildlog)
 
         gprint('-> Compiling package {}, go get some tea'.format(name))
-        makeargs = [(special and 'make-binary' in item['build']) or '/usr/bin/make']
+        makeargs = [
+            item['build'] if (special and 'make-binary' in item['build']) else '/usr/bin/make'
+        ]
         makeargs.extend(['--jobs=' + str(cores)])
         if special and 'make-args' in item['build']:
             makeargs.extend(item['build']['make-args'])
@@ -185,9 +189,19 @@ def load_rules():
 
 
 def update_rules(rulefile):
+    global rules
     with open(rulefile, 'r') as h:
         print('Using custom rules from {}'.format(rulefile))
         update(rules, json.loads(h.read()))
+        h.close()
+
+
+def load_config():
+    if not os.path.exists(CONFIG_FILE):
+        return
+    with open(CONFIG_FILE, 'r') as h:
+        dprint('Loading config from {}'.format(CONFIG_FILE))
+        config.update(json.loads(h.read()))
         h.close()
 
 
@@ -226,8 +240,13 @@ def get_install_list(package):
 
 
 def progress_download(url, path):
+    if 'proxy' in config:
+        proxies = config['proxy']
     # http://stackoverflow.com/a/20943461
-    r = requests.get(url, stream=True)
+    if not proxies:
+        r = requests.get(url, stream=True)
+    else:
+        r = requests.get(url, stream=True, proxies=proxies)
     with open(path, 'wb') as f:
         total_length = int(r.headers.get('content-length'))
         for chunk in progress.bar(r.iter_content(chunk_size=1024),
@@ -256,6 +275,7 @@ def install_item(name, item):
 
 
 if __name__ == '__main__':
+    load_config()
     load_rules()
     # print(rules)
     # running program from shell
