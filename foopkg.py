@@ -240,6 +240,7 @@ def get_install_list(package):
 
 
 def progress_download(url, path):
+    proxies = None
     if 'proxy' in config:
         proxies = config['proxy']
     # http://stackoverflow.com/a/20943461
