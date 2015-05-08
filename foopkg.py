@@ -38,6 +38,7 @@ class ColourCodes(object):
             self.green = subprocess.check_output("tput setaf 2".split()).decode()
             self.orange = subprocess.check_output("tput setaf 3".split()).decode()
             self.red = subprocess.check_output("tput setaf 1".split()).decode()
+            self.grey = subprocess.check_output("tput setaf 7".split()).decode()
         except subprocess.CalledProcessError:
             self.bold = ""
             self.reset = ""
@@ -46,6 +47,7 @@ class ColourCodes(object):
             self.green = ""
             self.orange = ""
             self.red = ""
+            self.grey = ""
 colours = ColourCodes()
 
 
@@ -60,7 +62,7 @@ def eprint(line):
 
 def dprint(line):
     if debug:
-        print('DEBUG: ', line)
+        print(colours.grey + 'DEBUG: ' + line + colours.reset)
 
 
 # tarfile, meet crude wrapper. He's your new replacement.
@@ -98,6 +100,18 @@ def get_confirmation(message, default=None):
             print('Answer not valid.')
 
 
+def update(orig_dict, new_dict):
+    for key, val in new_dict.items():
+        if isinstance(val, collections.Mapping):
+            tmp = update(orig_dict.get(key, {}), val)
+            orig_dict[key] = tmp
+        elif isinstance(val, list):
+            orig_dict[key] = (orig_dict[key] + val)
+        else:
+            orig_dict[key] = new_dict[key]
+    return orig_dict
+
+
 def check_installed(package):
     latest = '{}-{}'.format(package, rules[package]['version'])
     matchinginstalled = is_installed(package, get_matching=True)
@@ -106,7 +120,7 @@ def check_installed(package):
         exit(0)
     elif matchinginstalled != []:
         c = get_confirmation(
-            'Matching package{} {} installed. Do you want to continue installation? [y/N]'
+            'Matching package{} {} installed. Do you want to continue installation?'
             .format('s' if len(matchinginstalled) else '', ', '.join(matchinginstalled))
         )
         if not c:
@@ -168,6 +182,13 @@ def load_rules():
     # with open(RULE_DIR, 'r') as h:
     #     rules = json.loads(h.read())
     #     h.close()
+
+
+def update_rules(rulefile):
+    with open(rulefile, 'r') as h:
+        print('Using custom rules from {}'.format(rulefile))
+        update(rules, json.loads(h.read()))
+        h.close()
 
 
 def resolve_deps(package):
@@ -259,6 +280,9 @@ if __name__ == '__main__':
 dependency resolver is broken (always).",
         action='store_true'
     )
+    parser.add_argument('--add-rules', '-r', metavar='customrules',
+                        help='Additional rule files to use. These are '
+                        )
     parser.add_argument('--version', '-n', metavar='version',
                         help='Custom version to be used as override of version in rules.json'
                         )
@@ -266,6 +290,14 @@ dependency resolver is broken (always).",
     dryrun = args.no_install
     redownload = args.redownload
     package = args.package
+
+    if args.add_rules:
+        fullrulepath = os.path.abspath(args.add_rules)
+        try:
+            update_rules(fullrulepath)
+        except Exception as e:
+            eprint('ERROR: Exception occurred when loading custom rules:')
+            raise
 
     if package not in rules:
         rules['package'] = {}
