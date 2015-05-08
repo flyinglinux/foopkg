@@ -138,7 +138,7 @@ def compile_item(name, item, builddir, untardir):
 
         gprint('-> Compiling package {}, go get some tea'.format(name))
         makeargs = [(special and 'make-binary' in item['build']) or '/usr/bin/make']
-        makeargs.extend(['--jobs='+cores])
+        makeargs.extend(['--jobs='+str(cores)])
         if special and 'make-args' in item['build']:
             makeargs.extend(item['build']['make-args'])
         my_check_call(makeargs, buildlog)
