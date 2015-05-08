@@ -10,12 +10,16 @@ import argparse
 import tempfile
 import shutil
 import collections
+import multiprocessing
 import sys
 import glob
 
 
 RULE_DIR = '/etc/foopkg/rules.d'
 BUILD_DIR_BASE = '/var/build'
+
+
+cores = multiprocessing.cpu_count()
 rules = {}
 dryrun = False
 redownload = False
@@ -134,6 +138,7 @@ def compile_item(name, item, builddir, untardir):
 
         gprint('-> Compiling package {}, go get some tea'.format(name))
         makeargs = [(special and 'make-binary' in item['build']) or '/usr/bin/make']
+        makeargs.extend(['--jobs='+cores])
         if special and 'make-args' in item['build']:
             makeargs.extend(item['build']['make-args'])
         my_check_call(makeargs, buildlog)
