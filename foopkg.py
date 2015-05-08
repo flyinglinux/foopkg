@@ -284,3 +284,5 @@ dependency resolver is broken (always).",
         check_installed(args.package)
         if not args.no_deps:
             [install_item(i, rules[i]) for i in get_install_list(args.package)]
+        else:
+            install_item(package, rules[package])
