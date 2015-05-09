@@ -53,17 +53,20 @@ class ColourCodes(object):
 colours = ColourCodes()
 
 
-def gprint(line):
+def gprint(*args):
+    line = args.join(' ')
     print(line)
     # print(colours.green+colours.bold+line+colours.reset)
 
 
-def eprint(line):
+def eprint(*args):
+    line = args.join(' ')
     print(colours.red + colours.bold + line + colours.reset)
 
 
-def dprint(line):
+def dprint(*args):
     if debug:
+        line = args.join(' ')
         print(colours.grey + 'DEBUG: ' + line + colours.reset)
 
 
@@ -205,29 +208,54 @@ def load_config():
         h.close()
 
 
-def resolve_deps(package):
-    deplist = {}
-    if 'depends' not in rules[package]:
-        return [package]
-    il = collections.deque()
-    il.append(package)
+def resolve_deps (pkg):
+    if 'depends' not in rules[pkg]:
+        return pkg
 
+    # FIXME: this should be done once on package list update
+    # and cached in the backing store.
+    deplist = {}
     for p in rules:
-        deplist[p] = []
         if 'depends' in rules[p]:
             deplist[p] = rules[p]['depends']
+        else:
+            deplist[p] = None
 
-    ws = collections.deque()
-    ws.extend(deplist[package])
+    deps = [pkg]
+    for i, p in enumerate(deps):
+        if deplist[p]:
+            for s in deplist[p]:
+                dprint(p,"depends on",s)
+                if s in deps:
+                    deps.pop(i)
+                deps.append(s)
 
-    while len(ws) > 0:
-        p = ws.popleft()
-        if p in il:
-            il.remove(p)
-        il.appendleft(p)
-        if deplist[p] != []:
-            ws.extend(deplist[p])
-    return il
+    deps.reverse()
+
+
+# def resolve_deps(package):
+#     deplist = {}
+#     if 'depends' not in rules[package]:
+#         return [package]
+#     il = collections.deque()
+#     il.append(package)
+# 
+#     for p in rules:
+#         deplist[p] = []
+#         if 'depends' in rules[p]:
+#             deplist[p] = rules[p]['depends']
+# 
+#     ws = collections.deque()
+#     ws.extend(deplist[package])
+# 
+#     while len(ws) > 0:
+#         p = ws.popleft()
+#         if p in il:
+#             il.remove(p)
+#         il.appendleft(p)
+#         if deplist[p] != []:
+#             ws.extend(deplist[p])
+#     return il
 
 
 def get_install_list(package):
