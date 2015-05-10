@@ -25,7 +25,7 @@ rules = {}
 config = {}
 dryrun = False
 redownload = False
-debug = True
+verbosity = 0
 
 
 class ColourCodes(object):
@@ -61,13 +61,18 @@ def gprint(*args):
 
 def eprint(*args):
     line = args.join(' ')
-    print(colours.red + colours.bold + line + colours.reset)
+    print(colours.red + colours.bold + 'ERROR: ' + line + colours.reset)
 
 
-def dprint(*args):
-    if debug:
+def vprint(*args, on_verbosity=1):
+    prefix = ''
+    if verbosity >= 3:
+        prefix = 'DEBUG: '
+    else:
+        prefix = 'INFO: '
+    if verbosity >= on_verbosity:
         line = args.join(' ')
-        print(colours.grey + 'DEBUG: ' + line + colours.reset)
+        print(colours.grey + prefix + line + colours.reset)
 
 
 # tarfile, meet crude wrapper. He's your new replacement.
@@ -83,7 +88,7 @@ def my_check_call(command, logfile):
     try:
         subprocess.check_call(command, stdout=logfile, stderr=logfile)
     except subprocess.CalledProcessError:
-        eprint('ERROR: Nonzero exit code returned by `{}`! Check the relevant build.log.'
+        eprint('Nonzero exit code returned by `{}`! Check the relevant build.log.'
                .format(command[0]))
         logfile.close()
         exit(1)
@@ -184,7 +189,7 @@ def load_rules():
         with open(f, 'r') as h:
             j = h.read()
             rules.update(json.loads(j))
-            dprint('Loaded rules from file {}'.format(f))
+            vprint('Loaded rules from file {}'.format(f))
             h.close()
     # with open(RULE_DIR, 'r') as h:
     #     rules = json.loads(h.read())
@@ -203,12 +208,12 @@ def load_config():
     if not os.path.exists(CONFIG_FILE):
         return
     with open(CONFIG_FILE, 'r') as h:
-        dprint('Loading config from {}'.format(CONFIG_FILE))
+        vprint('Loading config from {}'.format(CONFIG_FILE))
         config.update(json.loads(h.read()))
         h.close()
 
 
-def resolve_deps (pkg):
+def resolve_deps(pkg):
     if 'depends' not in rules[pkg]:
         return pkg
 
@@ -225,7 +230,7 @@ def resolve_deps (pkg):
     for i, p in enumerate(deps):
         if deplist[p]:
             for s in deplist[p]:
-                dprint(p,"depends on",s)
+                vprint(p, "depends on", s, on_verbosity=4)
                 if s in deps:
                     deps.pop(i)
                 deps.append(s)
@@ -239,15 +244,15 @@ def resolve_deps (pkg):
 #         return [package]
 #     il = collections.deque()
 #     il.append(package)
-# 
+#
 #     for p in rules:
 #         deplist[p] = []
 #         if 'depends' in rules[p]:
 #             deplist[p] = rules[p]['depends']
-# 
+#
 #     ws = collections.deque()
 #     ws.extend(deplist[package])
-# 
+#
 #     while len(ws) > 0:
 #         p = ws.popleft()
 #         if p in il:
@@ -325,16 +330,16 @@ if __name__ == '__main__':
                         )
     parser.add_argument(
         '--no-deps',
-        help="Don't process dependencies. This is helpful when the \
-dependency resolver is broken (always).",
+        help="Don't process dependencies. This is helpful when you manually installed something.",
         action='store_true'
     )
     parser.add_argument('--add-rules', '-r', metavar='customrules',
-                        help='Additional rule files to use. These are '
+                        help='Additional rule files to use.'
                         )
     parser.add_argument('--version', '-n', metavar='version',
-                        help='Custom version to be used as override of version in rules.json'
+                        help='Custom version to be used as override of version in rules.json.'
                         )
+    parser.add_argument('--verbose', '-v', help='Verbosity level to use.', action='count')
     args = parser.parse_args()
     dryrun = args.no_install
     redownload = args.redownload
@@ -345,13 +350,13 @@ dependency resolver is broken (always).",
         try:
             update_rules(fullrulepath)
         except Exception as e:
-            eprint('ERROR: Exception occurred when loading custom rules:')
+            eprint('Exception occurred when loading custom rules:')
             raise
 
     if package not in rules:
         rules['package'] = {}
         # TODO: Implement fuzzy matching for package name and action
-        eprint('ERROR: rules for package {} not defined in {}.'.format(package, RULE_DIR))
+        eprint('rules for package {} not defined in {}.'.format(package, RULE_DIR))
         if not (args.file and args.version):
             raise ValueError('Rules not defined and file/version not passed. Cannot continue.')
         # ensure the user wants to do this madness
@@ -360,6 +365,7 @@ dependency resolver is broken (always).",
 
     rules[package]['version'] = args.version or rules[package]['version']
     rules[package]['url'] = args.file or rules[package]['url']
+    verbosity = args.verbose
 
     if args.action == 'install' or args.action == 'i':
         check_installed(args.package)
