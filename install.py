@@ -2,9 +2,9 @@
 import shutil
 import os
 
-INSTALL_LIB_PATH = '/usr/lib/foopkg'
-EXEC_SYMLINK_PATH = '/usr/bin/foopkg'
-EXECUTABLE_NAME = 'foopkg.py'
+INSTALL_LIB_PATH = '/usr/lib/soar'
+EXEC_SYMLINK_PATH = '/usr/bin/soar'
+EXECUTABLE_NAME = 'soar.py'
 
 if os.geteuid() != 0:
 	raise PermissionError('You forgot a sudo. Please use one.')

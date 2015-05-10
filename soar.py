@@ -15,8 +15,8 @@ import sys
 import glob
 
 
-RULE_DIR = '/etc/foopkg/rules.d'
-CONFIG_FILE = '/etc/foopkg/config.json'
+RULE_DIR = '/etc/soar/rules.d'
+CONFIG_FILE = '/etc/soar/config.json'
 BUILD_DIR_BASE = '/var/build'
 
 
