@@ -65,14 +65,18 @@ def eprint(*args):
 
 
 def vprint(*args, on_verbosity=1):
+    if verbosity <= on_verbosity:
+        return
     prefix = ''
-    if verbosity >= 3:
+
+    if on_verbosity >= 3:
         prefix = 'DEBUG: '
     else:
         prefix = 'INFO: '
-    if verbosity >= on_verbosity:
-        line = args.join(' ')
-        print(colours.grey + prefix + line + colours.reset)
+
+    saneargs = [str(x) for x in args]
+    line = ' '.join(saneargs)
+    print(colours.grey + prefix + line + colours.reset)
 
 
 # tarfile, meet crude wrapper. He's your new replacement.
@@ -94,18 +98,21 @@ def my_check_call(command, logfile):
         exit(1)
 
 
-def get_confirmation(message, default=None):
+def get_confirmation(message, default=None, exit_if_false=False):
     confirm = '[y/n]'
     if default is True:
         confirm = '[Y/n]'
     elif default is False:
         confirm = '[y/N]'
     while True:
-        a = input(message + confirm).lower().strip()
+        a = input(message + ' ' + confirm).lower().strip()
         if a[0] == 'y' or (default is True and a == ''):
             return True
         elif a[0] == 'n' or (default is False and a == ''):
-            exit(0)
+            if exit_if_false:
+                exit(0)
+            else:
+                return False
         else:
             print('Answer not valid.')
 
@@ -131,7 +138,8 @@ def check_installed(package):
     elif matchinginstalled != []:
         c = get_confirmation(
             'Matching package{} {} installed. Do you want to continue installation?'
-            .format('s' if len(matchinginstalled) else '', ', '.join(matchinginstalled))
+            .format('s' if len(matchinginstalled) else '', ', '.join(matchinginstalled)),
+            exit_if_false=True
         )
         if not c:
             exit(0)
@@ -236,6 +244,7 @@ def resolve_deps(pkg):
                 deps.append(s)
 
     deps.reverse()
+    return deps
 
 
 # def resolve_deps(package):
@@ -309,9 +318,6 @@ def install_item(name, item):
 
 
 if __name__ == '__main__':
-    load_config()
-    load_rules()
-    # print(rules)
     # running program from shell
     parser = argparse.ArgumentParser(description='Compile/install packages from tar files')
     parser.add_argument(
@@ -339,8 +345,12 @@ if __name__ == '__main__':
     parser.add_argument('--version', '-n', metavar='version',
                         help='Custom version to be used as override of version in rules.json.'
                         )
+    parser.add_argument('--yes', '-y', help='Assume yes.', action='store_true')
     parser.add_argument('--verbose', '-v', help='Verbosity level to use.', action='count')
     args = parser.parse_args()
+    verbosity = args.verbose or 0
+    load_config()
+    load_rules()
     dryrun = args.no_install
     redownload = args.redownload
     package = args.package
@@ -360,16 +370,20 @@ if __name__ == '__main__':
         if not (args.file and args.version):
             raise ValueError('Rules not defined and file/version not passed. Cannot continue.')
         # ensure the user wants to do this madness
-        if not get_confirmation('Do you want to continue?', default=False):
+        if not get_confirmation('Do you want to continue?', default=False, exit_if_false=True):
             exit(0)
 
     rules[package]['version'] = args.version or rules[package]['version']
     rules[package]['url'] = args.file or rules[package]['url']
-    verbosity = args.verbose
 
     if args.action == 'install' or args.action == 'i':
         check_installed(args.package)
         if not args.no_deps:
-            [install_item(i, rules[i]) for i in get_install_list(args.package)]
+            install_list = get_install_list(args.package)
+            print('The following packages are about to be installed:')
+            print(', '.join(install_list) + '\n')
+            if not args.yes:
+                get_confirmation('Continue?', default=True, exit_if_false=True)
+            [install_item(i, rules[i]) for i in install_list]
         else:
             install_item(package, rules[package])
