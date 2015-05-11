@@ -54,18 +54,20 @@ colours = ColourCodes()
 
 
 def gprint(*args):
-    line = args.join(' ')
+    saneargs = [str(x) for x in args]
+    line = ' '.join(saneargs)
     print(line)
     # print(colours.green+colours.bold+line+colours.reset)
 
 
 def eprint(*args):
-    line = args.join(' ')
+    saneargs = [str(x) for x in args]
+    line = ' '.join(saneargs)
     print(colours.red + colours.bold + 'ERROR: ' + line + colours.reset)
 
 
 def vprint(*args, on_verbosity=1):
-    if verbosity <= on_verbosity:
+    if verbosity < on_verbosity:
         return
     prefix = ''
 
@@ -106,9 +108,9 @@ def get_confirmation(message, default=None, exit_if_false=False):
         confirm = '[y/N]'
     while True:
         a = input(message + ' ' + confirm).lower().strip()
-        if a[0] == 'y' or (default is True and a == ''):
+        if (default is True and a == '') or a[0] == 'y':
             return True
-        elif a[0] == 'n' or (default is False and a == ''):
+        elif (default is False and a == '') or a[0] == 'n':
             if exit_if_false:
                 exit(0)
             else:
@@ -223,7 +225,7 @@ def load_config():
 
 def resolve_deps(pkg):
     if 'depends' not in rules[pkg]:
-        return pkg
+        return [pkg]
 
     # FIXME: this should be done once on package list update
     # and cached in the backing store.
@@ -273,7 +275,8 @@ def resolve_deps(pkg):
 
 
 def get_install_list(package):
-    installlist = list(resolve_deps(package))
+    vprint('Getting install list for package', package, on_verbosity=4)
+    installlist = resolve_deps(package)
     for pkg in installlist:
         if is_installed(pkg):
             gprint('-> {} already installed, skipping'.format(package))
